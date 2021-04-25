@@ -16,21 +16,26 @@ def get_html(url):
     r = requests.get(url)
     return r.text
 
-
-def get_all_links(html):
+# Funkce ziska kod obce, nazev obce a odkaz na stranku s vysledky voleb pro kazdou obec
+# Vystupem je list tuplu (kod, nazev, odkaz)
+def get_all_locations(html):
     soup = bs(html, 'html.parser')
     divs = soup.find_all('div', class_='t3')
     tables = [table for table in divs]
-    links_all = []
+    all_locations = []
     for i, table in enumerate(tables, start=1):
-        links_tab = []
-        headers = f't{i}sa1 t{i}sb1'
-        tds = table.find_all('td', class_="cislo", headers=headers)
-        for td in tds:
+        locations = []
+        headers1 = f't{i}sa1 t{i}sb1'
+        # headers2 = f't{i}sa1 t{i}sb2'
+        tds1 = table.find_all('td', class_="cislo", headers=headers1)
+        # tds2 = table.find_all('td', headers=headers2)
+        for td in tds1:
+            location_code = td.string
+            location_name = td.next_sibling.next_sibling.text
             link = URL_START + td.find('a').get('href')
-            links_tab.append(link)
-        links_all.extend(links_tab)
-    return links_all
+            locations.append((location_code, location_name, link))
+        all_locations.extend(locations)
+    return all_locations
 
 
 # Vystupem je list tuplu, obsahujici pary cisel - poradkove cislo strany a pocet platnych hlasu
@@ -59,10 +64,10 @@ def get_parties_votes(url):
 
 def main():
     html = get_html(URL)
-    links_obce = get_all_links(html)
+    all_locations = get_all_locations(html)
     from pprint import pprint as pp
-    print(len(links_obce))
-    pp(links_obce)
+    print(len(all_locations))
+    pp(all_locations)
 
 
 
