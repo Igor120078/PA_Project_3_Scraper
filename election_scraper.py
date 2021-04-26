@@ -3,10 +3,8 @@ from bs4 import BeautifulSoup as bs
 #import urllib3
 
 URL_CR = 'https://volby.cz/pls/ps2017nss/ps2?xjazyk=CZ&xkraj=0'
-# https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=2&xnumnuts=2109
-# <td class="cislo" headers="t1sa1 t1sb1"><a href="ps311?xjazyk=CZ&amp;xkraj=2&amp;xobec=538043&amp;xvyber=2109">538043</a></td>
 # URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=2&xnumnuts=2109'
-URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=6&xnumnuts=4207'  # Usti nad Labem:
+URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=6&xnumnuts=4207'  # Usti nad Labem
 RESULT_OUT = 'vysledky_Praha-vychod.csv'
 # URL_START = 'https://volby.cz/pls/ps2017nss/'
 URL_START = 'https://volby.cz/pls/ps2017nss/'  # Usti nad Labem:
@@ -14,11 +12,11 @@ URL_START = 'https://volby.cz/pls/ps2017nss/'  # Usti nad Labem:
 
 # Funkce ziska seznam vsech stran kandidujicich v CR
 # Jako vstup potrebuje odkaz na vysledky voleb cele CR
-def get_all_parties(url_cr):
+def get_all_parties_cr(url_cr):
     r = requests.get(url_cr)
     soup = bs(r.text, 'html.parser')
     divs = soup.find_all('div', class_='t2_430')
-    parties_all = []
+    parties_all_cr = []
     for i, div in enumerate(divs, start=1):
         headers = f't{i}sa1 t{i}sb2'
         names = div.find_all('td', headers=headers)
@@ -26,18 +24,18 @@ def get_all_parties(url_cr):
         for name in names:
             if name.text.strip() != '-':
                 parties_div.append(name.text)
-        parties_all.extend(parties_div)
+        parties_all_cr.extend(parties_div)
 
-    return parties_all
+    return parties_all_cr
 
 
 # Fukce vytvori hlavicku vysledne tabulky
 def create_table_head(parties_all):
     table_head = ['Kod obce',
-                  'Nazev obce',
-                  'Volici v seznamu',
-                  'Vydane obalky',
-                  'Platne hlasy']
+                  'Název obce',
+                  'Voliči v seznamu',
+                  'Vydané obálky',
+                  'Platné hlasy']
     return table_head.extend(parties_all)
 
 
@@ -45,6 +43,7 @@ def create_table_head(parties_all):
 def get_html(url):
     r = requests.get(url)
     return r.text
+
 
 # Funkce ziska kod obce, nazev obce a odkaz na stranku s vysledky voleb pro kazdou obec
 # Vystupem je list tuplu (kod, nazev, odkaz)
@@ -70,16 +69,15 @@ def get_all_locations(html):
         all_locations.extend(locations)
     return all_locations
 
+
 # Vstupem funkce je odkaz na stranku s vysledky konkretni obce z fukce get_all_locations
 # Vystupem je list tuplu, obsahujici pary cisel - poradkove cislo strany a pocet platnych hlasu
-
-def get_parties_votes(url):
-    r = requests.get(URL)
-    soup = bs(r.text, 'html.parser')
+def get_parties_votes(html):
+    soup = bs(html, 'html.parser')
 
     divs = soup.find_all('div', class_='t2_470')
     # Vytvorime prazdnyj list pro poradkova cisla a pocet hlasu vsech stran, kandidujicich v obci
-    parties_all = []
+    parties_votes_all = []
     for i, div in enumerate(divs, start=1):
         headers_nums = f't{i}sa1 t{i}sb1'
         headers_votes = f't{i}sa2 t{i}sb3'
@@ -88,23 +86,53 @@ def get_parties_votes(url):
         parties_div = []
         for n in range(len(parties_nums)):
             parties_div.append((parties_nums[n].text, parties_votes[n].text))
-        parties_all.extend(parties_div)
+        parties_votes_all.extend(parties_div)
 
-    return parties_all
+    return parties_votes_all
 
-
-
-
+# Funkce vytori list s platnymi hlasy pro kazdou stranu v dane obci
+# a prida i strany, ktere v obci ne kandidovali s prazdnym stringem pro pocet hlasu.
+# Data zformovana podle celorepublikoveho seznamu a poradi politickych stran,
+# a tim jsou pripravena pro zapis do vysledneho souboru
+def get_corrected_parties_votes(parties_votes, parties_all_cr):
+    parties_votes_region = []
+    for num in range(1, len(parties_all_cr) + 1):
+        try:
+            if int(parties_votes[0][0]) == num:
+                parties_votes_region.append(parties_votes[0][1])
+                del parties_votes[0]
+            else:
+                parties_votes_region.append('')
+        except:
+            parties_votes_region.append('')
+    return parties_votes_region
 
 
 def main():
-    html = get_html(URL)
-    all_locations = get_all_locations(html)
+    parties_all_cr = get_all_parties_cr(URL_CR)
+    create_table_head(parties_all_cr)
+    html1 = get_html(URL)
+    all_locations = get_all_locations(html1)
+    result_table = []
+    for elem in all_locations:
+        code, name, link = elem
+        html2 = get_html(link)
+        soup = bs(html2, 'html.parser')
+        registered = soup.find('td', class_='cislo', headers='sa2').text.strip()
+        envelops = soup.find('td', class_='cislo', headers='sa3').text.strip()
+        valid = soup.find('td', class_='cislo', headers='sa6').text.strip()
+
+        parties_votes = get_parties_votes(html2)
+        parties_votes_region = get_corrected_parties_votes(parties_votes, parties_all_cr)
+        row_to_table = (code, name, registered, envelops, valid, ','.join(parties_votes_region))
+        result_table.append(row_to_table)
+
     from pprint import pprint as pp
-    print(len(all_locations))
-    pp(all_locations)
+    pp(result_table)
 
 
 
-main()
+
+if __name__ == '__main__':
+    main()
 
