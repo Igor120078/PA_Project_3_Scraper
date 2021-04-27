@@ -1,11 +1,12 @@
 import requests
 from bs4 import BeautifulSoup as bs
+import csv
 #import urllib3
 
 URL_CR = 'https://volby.cz/pls/ps2017nss/ps2?xjazyk=CZ&xkraj=0'
 # URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=2&xnumnuts=2109'
 URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=6&xnumnuts=4207'  # Usti nad Labem
-RESULT_OUT = 'vysledky_Praha-vychod.csv'
+FILE_OUT = 'Vysledky_Praha-Vychod.csv'
 # URL_START = 'https://volby.cz/pls/ps2017nss/'
 URL_START = 'https://volby.cz/pls/ps2017nss/'  # Usti nad Labem:
 
@@ -36,7 +37,7 @@ def create_table_head(parties_all):
                   'Voliči v seznamu',
                   'Vydané obálky',
                   'Platné hlasy']
-    return table_head.extend(parties_all)
+    return table_head + parties_all
 
 
 
@@ -50,7 +51,7 @@ def get_html(url):
 # [('567931',
 #   'Dolní Zálezly',
 #   'https://volby.cz/pls/ps2017nss/ps311?xjazyk=CZ&xkraj=6&xobec=567931&xvyber=4207'), ...]
-def get_all_locations(html):
+def get_all_locations(html):    # - testovano, v poradku
     soup = bs(html, 'html.parser')
     divs = soup.find_all('div', class_='t3')
     tables = [table for table in divs]
@@ -85,7 +86,7 @@ def get_parties_votes(html):
         parties_votes = div.find_all('td', class_='cislo', headers=headers_votes)
         parties_div = []
         for n in range(len(parties_nums)):
-            parties_div.append((parties_nums[n].text, parties_votes[n].text))
+            parties_div.append((parties_nums[n].text, parties_votes[n].text.replace('\\xa0', '')))
         parties_votes_all.extend(parties_div)
 
     return parties_votes_all
@@ -102,15 +103,25 @@ def get_corrected_parties_votes(parties_votes, parties_all_cr):
                 parties_votes_region.append(parties_votes[0][1])
                 del parties_votes[0]
             else:
-                parties_votes_region.append('')
+                parties_votes_region.append(' ')
         except:
-            parties_votes_region.append('')
+            parties_votes_region.append(' ')
     return parties_votes_region
+
+
+def write_csv(file, head, table):
+    with open(file, mode='w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(head)
+        writer.writerows(table)
+    print(f'File {FILE_OUT} created')
+
 
 
 def main():
     parties_all_cr = get_all_parties_cr(URL_CR)
-    create_table_head(parties_all_cr)
+    table_head = create_table_head(parties_all_cr)
+    print(table_head)
     html1 = get_html(URL)
     all_locations = get_all_locations(html1)
     result_table = []
@@ -118,19 +129,25 @@ def main():
         code, name, link = elem
         html2 = get_html(link)
         soup = bs(html2, 'html.parser')
-        registered = soup.find('td', class_='cislo', headers='sa2').text.strip()
-        envelops = soup.find('td', class_='cislo', headers='sa3').text.strip()
-        valid = soup.find('td', class_='cislo', headers='sa6').text.strip()
+        registered_ = soup.find('td', class_='cislo', headers='sa2').text.strip()
+        registered = registered_.replace('\\xa0', '')
+        print(registered)
+        envelops_ = soup.find('td', class_='cislo', headers='sa3').text.strip()
+        envelops = envelops_.replace('\\xa0', '')
+        valid_ = soup.find('td', class_='cislo', headers='sa6').text.strip()
+        valid = valid_.replace('\\xa0', '')
 
         parties_votes = get_parties_votes(html2)
         parties_votes_region = get_corrected_parties_votes(parties_votes, parties_all_cr)
-        row_to_table = (code, name, registered, envelops, valid, ','.join(parties_votes_region))
+        print(parties_votes_region)
+        row_to_table = [code, name, registered, envelops, valid] + parties_votes_region
         result_table.append(row_to_table)
+        print('Data for', code, name, 'parsed')
+
+    write_csv(FILE_OUT, table_head, result_table)
 
     from pprint import pprint as pp
     pp(result_table)
-
-
 
 
 if __name__ == '__main__':
