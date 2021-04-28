@@ -1,6 +1,8 @@
 import requests
 from bs4 import BeautifulSoup as bs
+import sys
 import csv
+
 #import urllib3
 
 URL_CR = 'https://volby.cz/pls/ps2017nss/ps2?xjazyk=CZ&xkraj=0'
@@ -43,7 +45,10 @@ def create_table_head(parties_all):
 
 def get_html(url):
     r = requests.get(url)
-    return r.text
+    if r.status_code == 200:
+        return r.text
+    else:
+        sys.exit("Sorry, but the link to a webpage with election results is incorrect")
 
 
 # Funkce ziska kod obce, nazev obce a odkaz na stranku s vysledky voleb pro kazdou obec
@@ -118,10 +123,17 @@ def write_csv(file, head, table):
 
 
 
-def main():
+def main(argv):
+    if len(argv) < 2:
+        sys.exit("The script needs two arguments to work correctly, {} was given}".format(len(argv)))
+    elif not argv[1].startswith('https://volby.cz/pls/ps2017nss/'):
+        sys.exit("Sorry, but the first argument isn't a link to a web page with the election results")
+    else:
+        URL = argv[1]
+        FILE_OUT = 'Vysledky_Praha-Vychod.csv'
+    html1 = get_html(URL)
     parties_all_cr = get_all_parties_cr(URL_CR)
     table_head = create_table_head(parties_all_cr)
-    html1 = get_html(URL)
     all_locations = get_all_locations(html1)
     result_table = []
     for elem in all_locations:
