@@ -13,11 +13,11 @@ URL_START = 'https://volby.cz/pls/ps2017nss/'
 
 
 def get_all_parties_cr(url_cr):
-    '''
+    """
     Funkce ziska seznam vsech stran kandidujicich v CR.
     :param url_cr: odkaz na vysledky voleb cele CR
     :return: list s nazvy vsech politickych stran CR
-    '''
+    """
     r = requests.get(url_cr)
     soup = bs(r.text, 'html.parser')
     divs = soup.find_all('div', class_='t2_430')
@@ -35,11 +35,11 @@ def get_all_parties_cr(url_cr):
 
 
 def create_table_head(parties_all):
-    '''
+    """
     Fukce vytvori hlavicku vysledne tabulky.
     :param parties_all: seznam vsech stran CR
     :return: list s nazvy sloupcu vysledne tabulky
-    '''
+    """
     table_head = ['Kod obce',
                   'Název obce',
                   'Voliči v seznamu',
@@ -49,12 +49,12 @@ def create_table_head(parties_all):
 
 
 def get_html(url):
-    '''
+    """
     Funkce ziska ziska html kod web stranky s vysledky voleb
     a zkontruluje odezvu webu na dotaz.
     :param url: odkaz na web stranku
     :return: html kod stranky
-    '''
+    """
     r = requests.get(url)
     if r.status_code == 200:
         return r.text
@@ -63,7 +63,7 @@ def get_html(url):
 
 
 def get_all_locations(html):
-    '''
+    """
     Funkce ziska kod obce, nazev obce a odkaz na stranku s vysledky voleb pro kazdou obec.
     Vystupem je list tuplu (kod, nazev, odkaz)
 [('567931',
@@ -71,7 +71,7 @@ def get_all_locations(html):
   'https://volby.cz/pls/ps2017nss/ps311?xjazyk=CZ&xkraj=6&xobec=567931&xvyber=4207'), ...]
     :param html: html kod stranky
     :return: list of tuples (code, name, link)
-    '''
+    """
     soup = bs(html, 'html.parser')
     divs = soup.find_all('div', class_='t3')
     tables = [table for table in divs]
@@ -92,13 +92,13 @@ def get_all_locations(html):
 
 
 def get_parties_votes(html):
-    '''
+    """
     Funkce ziska vysledky hlasovani pro danou obec podle politickych stran.
     Vstupem funkce je odkaz na stranku s vysledky voleb pro konkretni obce z fukce get_all_locations.
     Vystupem je list tuplu, obsahujici pary cisel - poradkove cislo strany a pocet platnych hlasu
     :param html: odkaz na stranku s vysledky voleb
     :return: list of tuples (party #, votes)
-    '''
+    """
     soup = bs(html, 'html.parser')
 
     divs = soup.find_all('div', class_='t2_470')
@@ -117,7 +117,7 @@ def get_parties_votes(html):
 
 
 def get_corrected_parties_votes(parties_votes, parties_all_cr):
-    '''
+    """
     Funkce vytori list s platnymi hlasy pro kazdou stranu v dane obci
 a prida i strany, ktere v obci ne kandidovali s prazdnym stringem pro pocet hlasu.
 Ve vysledku data jsou zformovana podle celorepublikoveho seznamu a poradi politickych stran,
@@ -125,7 +125,7 @@ a tim jsou pripravena pro zapis do vysledneho souboru.
     :param parties_votes: seznam politickych stran a jejich hlasu pro konkretni obec
     :param parties_all_cr: seznam vsech politickych stran CR a jejich poradkova cisla
     :return: list platnych hlasu vsech politickych stran CR pro danou obec
-    '''
+    """
     parties_votes_region = []
     for num in range(1, len(parties_all_cr) + 1):
         try:
@@ -140,19 +140,18 @@ a tim jsou pripravena pro zapis do vysledneho souboru.
 
 
 def write_csv(file, head, table):
-    '''
+    """
     Funkce zapise ziskana data do vysledneho souboru.
     :param file: nazev souboru
     :param head: hlavicka tabulky
     :param table: tabulka s vysledky scrapingu
     :return: soubur s vysledky scrapingu
-    '''
+    """
     with open(file, mode='w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(head)
         writer.writerows(table)
     print(f'File {FILE_OUT} created')
-
 
 
 def main():
@@ -163,9 +162,10 @@ def main():
     else:
         URL = sys.argv[1]
         FILE_OUT = sys.argv[2]
-    html1 = get_html(URL)
     parties_all_cr = get_all_parties_cr(URL_CR)
     table_head = create_table_head(parties_all_cr)
+    print(f"STAHUJI DATA Z VYBRANEHO URL: {URL}")
+    html1 = get_html(URL)
     all_locations = get_all_locations(html1)
     result_table = []
     for elem in all_locations:
@@ -185,6 +185,7 @@ def main():
         result_table.append(row_to_table)
         print('Data for', code, name, 'parsed')
 
+    print(f"UKLADAM DATA DO SOUBORU: {FILE_OUT}")
     write_csv(FILE_OUT, table_head, result_table)
 
 
