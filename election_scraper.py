@@ -2,20 +2,22 @@ import requests
 from bs4 import BeautifulSoup as bs
 import sys
 import csv
-
 #import urllib3
 
+
 URL_CR = 'https://volby.cz/pls/ps2017nss/ps2?xjazyk=CZ&xkraj=0'
-# URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=2&xnumnuts=2109'
-URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=6&xnumnuts=4207'  # Usti nad Labem
+URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=2&xnumnuts=2109'
+# URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=6&xnumnuts=4207'  # Usti nad Labem
 FILE_OUT = 'Vysledky_Praha-Vychod.csv'
-# URL_START = 'https://volby.cz/pls/ps2017nss/'
-URL_START = 'https://volby.cz/pls/ps2017nss/'  # Usti nad Labem:
+URL_START = 'https://volby.cz/pls/ps2017nss/'
 
 
-# Funkce ziska seznam vsech stran kandidujicich v CR
-# Jako vstup potrebuje odkaz na vysledky voleb cele CR
 def get_all_parties_cr(url_cr):
+    '''
+    Funkce ziska seznam vsech stran kandidujicich v CR.
+    :param url_cr: odkaz na vysledky voleb cele CR
+    :return: list s nazvy vsech politickych stran CR
+    '''
     r = requests.get(url_cr)
     soup = bs(r.text, 'html.parser')
     divs = soup.find_all('div', class_='t2_430')
@@ -32,8 +34,12 @@ def get_all_parties_cr(url_cr):
     return parties_all_cr
 
 
-# Fukce vytvori hlavicku vysledne tabulky
 def create_table_head(parties_all):
+    '''
+    Fukce vytvori hlavicku vysledne tabulky.
+    :param parties_all: seznam vsech stran CR
+    :return: list s nazvy sloupcu vysledne tabulky
+    '''
     table_head = ['Kod obce',
                   'Název obce',
                   'Voliči v seznamu',
@@ -42,8 +48,13 @@ def create_table_head(parties_all):
     return table_head + parties_all
 
 
-
 def get_html(url):
+    '''
+    Funkce ziska ziska html kod web stranky s vysledky voleb
+    a zkontruluje odezvu webu na dotaz.
+    :param url: odkaz na web stranku
+    :return: html kod stranky
+    '''
     r = requests.get(url)
     if r.status_code == 200:
         return r.text
@@ -51,12 +62,16 @@ def get_html(url):
         sys.exit("Sorry, but the link to a webpage with election results is incorrect")
 
 
-# Funkce ziska kod obce, nazev obce a odkaz na stranku s vysledky voleb pro kazdou obec
-# Vystupem je list tuplu (kod, nazev, odkaz)
-# [('567931',
-#   'Dolní Zálezly',
-#   'https://volby.cz/pls/ps2017nss/ps311?xjazyk=CZ&xkraj=6&xobec=567931&xvyber=4207'), ...]
-def get_all_locations(html):    # - testovano, v poradku
+def get_all_locations(html):
+    '''
+    Funkce ziska kod obce, nazev obce a odkaz na stranku s vysledky voleb pro kazdou obec.
+    Vystupem je list tuplu (kod, nazev, odkaz)
+[('567931',
+  'Dolní Zálezly',
+  'https://volby.cz/pls/ps2017nss/ps311?xjazyk=CZ&xkraj=6&xobec=567931&xvyber=4207'), ...]
+    :param html: html kod stranky
+    :return: list of tuples (code, name, link)
+    '''
     soup = bs(html, 'html.parser')
     divs = soup.find_all('div', class_='t3')
     tables = [table for table in divs]
@@ -76,13 +91,17 @@ def get_all_locations(html):    # - testovano, v poradku
     return all_locations
 
 
-# Vstupem funkce je odkaz na stranku s vysledky konkretni obce z fukce get_all_locations
-# Vystupem je list tuplu, obsahujici pary cisel - poradkove cislo strany a pocet platnych hlasu
 def get_parties_votes(html):
+    '''
+    Funkce ziska vysledky hlasovani pro danou obec podle politickych stran.
+    Vstupem funkce je odkaz na stranku s vysledky voleb pro konkretni obce z fukce get_all_locations.
+    Vystupem je list tuplu, obsahujici pary cisel - poradkove cislo strany a pocet platnych hlasu
+    :param html: odkaz na stranku s vysledky voleb
+    :return: list of tuples (party #, votes)
+    '''
     soup = bs(html, 'html.parser')
 
     divs = soup.find_all('div', class_='t2_470')
-    # Vytvorime prazdnyj list pro poradkova cisla a pocet hlasu vsech stran, kandidujicich v obci
     parties_votes_all = []
     for i, div in enumerate(divs, start=1):
         headers_nums = f't{i}sa1 t{i}sb1'
@@ -96,11 +115,17 @@ def get_parties_votes(html):
 
     return parties_votes_all
 
-# Funkce vytori list s platnymi hlasy pro kazdou stranu v dane obci
-# a prida i strany, ktere v obci ne kandidovali s prazdnym stringem pro pocet hlasu.
-# Data zformovana podle celorepublikoveho seznamu a poradi politickych stran,
-# a tim jsou pripravena pro zapis do vysledneho souboru
+
 def get_corrected_parties_votes(parties_votes, parties_all_cr):
+    '''
+    Funkce vytori list s platnymi hlasy pro kazdou stranu v dane obci
+a prida i strany, ktere v obci ne kandidovali s prazdnym stringem pro pocet hlasu.
+Ve vysledku data jsou zformovana podle celorepublikoveho seznamu a poradi politickych stran,
+a tim jsou pripravena pro zapis do vysledneho souboru.
+    :param parties_votes: seznam politickych stran a jejich hlasu pro konkretni obec
+    :param parties_all_cr: seznam vsech politickych stran CR a jejich poradkova cisla
+    :return: list platnych hlasu vsech politickych stran CR pro danou obec
+    '''
     parties_votes_region = []
     for num in range(1, len(parties_all_cr) + 1):
         try:
@@ -115,6 +140,13 @@ def get_corrected_parties_votes(parties_votes, parties_all_cr):
 
 
 def write_csv(file, head, table):
+    '''
+    Funkce zapise ziskana data do vysledneho souboru.
+    :param file: nazev souboru
+    :param head: hlavicka tabulky
+    :param table: tabulka s vysledky scrapingu
+    :return: soubur s vysledky scrapingu
+    '''
     with open(file, mode='w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(head)
@@ -123,14 +155,14 @@ def write_csv(file, head, table):
 
 
 
-def main(argv):
-    if len(argv) < 2:
-        sys.exit("The script needs two arguments to work correctly, {} was given}".format(len(argv)))
-    elif not argv[1].startswith('https://volby.cz/pls/ps2017nss/'):
+def main():
+    if len(sys.argv) < 2:
+        sys.exit("The script needs two arguments to work correctly, {} was given}".format(len(sys.argv)))
+    elif not sys.argv[1].startswith('https://volby.cz/pls/ps2017nss/'):
         sys.exit("Sorry, but the first argument isn't a link to a web page with the election results")
     else:
-        URL = argv[1]
-        FILE_OUT = 'Vysledky_Praha-Vychod.csv'
+        URL = sys.argv[1]
+        FILE_OUT = sys.argv[2]
     html1 = get_html(URL)
     parties_all_cr = get_all_parties_cr(URL_CR)
     table_head = create_table_head(parties_all_cr)
@@ -142,7 +174,6 @@ def main(argv):
         soup = bs(html2, 'html.parser')
         registered_ = soup.find('td', class_='cislo', headers='sa2').text.strip()
         registered = registered_.replace('\xa0', '')
-        print(registered)
         envelops_ = soup.find('td', class_='cislo', headers='sa3').text.strip()
         envelops = envelops_.replace('\xa0', '')
         valid_ = soup.find('td', class_='cislo', headers='sa6').text.strip()
@@ -159,4 +190,3 @@ def main(argv):
 
 if __name__ == '__main__':
     main()
-
