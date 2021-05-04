@@ -7,9 +7,7 @@ import csv
 URL_CR = 'https://volby.cz/pls/ps2017nss/ps2?xjazyk=CZ&xkraj=0'
 URL_START = 'https://volby.cz/pls/ps2017nss/'
 # URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=2&xnumnuts=2109'
-# URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=6&xnumnuts=4207'  # Usti nad Labem
 # FILE_OUT = 'Vysledky_Praha-Vychod.csv'
-
 
 
 def get_all_parties_cr(url_cr):
@@ -65,9 +63,9 @@ def get_all_locations(html):
     """
     Funkce ziska kod obce, nazev obce a odkaz na stranku s vysledky voleb pro kazdou obec.
     Vystupem je list tuplu (kod, nazev, odkaz)
-[('567931',
-  'Dolní Zálezly',
-  'https://volby.cz/pls/ps2017nss/ps311?xjazyk=CZ&xkraj=6&xobec=567931&xvyber=4207'), ...]
+    [('567931',
+    'Dolní Zálezly',
+    'https://volby.cz/pls/ps2017nss/ps311?xjazyk=CZ&xkraj=6&xobec=567931&xvyber=4207'), ...]
     :param html: html kod stranky
     :return: list of tuples (code, name, link)
     """
@@ -118,9 +116,9 @@ def get_parties_votes(html):
 def get_corrected_parties_votes(parties_votes, parties_all_cr):
     """
     Funkce vytori list s platnymi hlasy pro kazdou stranu v dane obci
-a prida i strany, ktere v obci ne kandidovali s prazdnym stringem pro pocet hlasu.
-Ve vysledku data jsou zformovana podle celorepublikoveho seznamu a poradi politickych stran,
-a tim jsou pripravena pro zapis do vysledneho souboru.
+    a prida i strany, ktere v obci ne kandidovali s prazdnym stringem pro pocet hlasu.
+    Ve vysledku data jsou zformovana podle celorepublikoveho seznamu a poradi politickych stran,
+    a tim jsou pripravena pro zapis do vysledneho souboru.
     :param parties_votes: seznam politickych stran a jejich hlasu pro konkretni obec
     :param parties_all_cr: seznam vsech politickych stran CR a jejich poradkova cisla
     :return: list platnych hlasu vsech politickych stran CR pro danou obec
@@ -144,7 +142,7 @@ def get_result_table(all_locations, parties_all_cr):
     a z kazdeho odkazu na vysledky voleb pro konkretni obec ziska vsechny dalsi data
     pro vytvoreni vysledne tabulky (registrovane volici, vydane obalky, platne hlasy, kandidujici strany
     a pocet jimi ziskanych hlasu).
-    Druhy parametr je seznam vsech politickych stran CR pro vytvoreni stejneho vystupu po kazde obci.
+    Druhy parametr je seznam vsech politickych stran CR pro unifikaci vystupu po kazde obci.
     :param parties_all_cr: seznam vsech politickych stran CR
     :param all_locations: list tuplu (kod obce, nazev obce, odkaz na vysledky voleb v teto obci)
     :return result_table: vysledna tabulka (list listu) pro zapis do souboru
@@ -175,7 +173,7 @@ def write_csv(file, head, table):
     :param file: nazev souboru
     :param head: hlavicka tabulky
     :param table: tabulka s vysledky scrapingu
-    :return: soubur s vysledky scrapingu
+    :return: None
     """
     with open(file, mode='w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
@@ -184,13 +182,19 @@ def write_csv(file, head, table):
 
 
 def main():
+    """
+    Hlavni funkce, ktera ridi prubeh scrapovani a zajisti take
+    kontrolu zadanych pri spousteni argumentu a prubezny vytisk
+    oznameni o chodu scrapovani.
+    :return: None
+    """
     if len(sys.argv) < 3:
         sys.exit("The script needs two arguments to work correctly, {} was given".format(len(sys.argv)-1))
-    elif not sys.argv[1].startswith('https://volby.cz/pls/ps2017nss/'):
+    elif not sys.argv[1].startswith("https://volby.cz/pls/ps2017nss/"):
         sys.exit("Sorry, but the first argument isn't a link to a web page with the election results")
     else:
         URL = sys.argv[1]
-        FILE_OUT = sys.argv[2]
+        FILE_OUT = sys.argv[2] + '.csv'
     parties_all_cr = get_all_parties_cr(URL_CR)
     table_head = create_table_head(parties_all_cr)
     print(f"STAHUJI DATA Z VYBRANEHO URL: {URL}")
