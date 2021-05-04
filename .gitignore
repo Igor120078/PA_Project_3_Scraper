@@ -1,5 +1,4 @@
 .git
 .idea
 venv
-html_volby.docx
-test.py
+develop.py

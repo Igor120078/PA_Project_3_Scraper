@@ -2,14 +2,14 @@ import requests
 from bs4 import BeautifulSoup as bs
 import sys
 import csv
-#import urllib3
 
 
 URL_CR = 'https://volby.cz/pls/ps2017nss/ps2?xjazyk=CZ&xkraj=0'
-URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=2&xnumnuts=2109'
-# URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=6&xnumnuts=4207'  # Usti nad Labem
-FILE_OUT = 'Vysledky_Praha-Vychod.csv'
 URL_START = 'https://volby.cz/pls/ps2017nss/'
+# URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=2&xnumnuts=2109'
+# URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=6&xnumnuts=4207'  # Usti nad Labem
+# FILE_OUT = 'Vysledky_Praha-Vychod.csv'
+
 
 
 def get_all_parties_cr(url_cr):
@@ -50,8 +50,7 @@ def create_table_head(parties_all):
 
 def get_html(url):
     """
-    Funkce ziska ziska html kod web stranky s vysledky voleb
-    a zkontruluje odezvu webu na dotaz.
+    Funkce ziska html kod web stranky s vysledky voleb a zkontruluje odezvu webu na dotaz.
     :param url: odkaz na web stranku
     :return: html kod stranky
     """
@@ -59,7 +58,7 @@ def get_html(url):
     if r.status_code == 200:
         return r.text
     else:
-        sys.exit("Sorry, but the link to a webpage with election results is incorrect")
+        sys.exit("Web response Error")
 
 
 def get_all_locations(html):
@@ -139,6 +138,37 @@ a tim jsou pripravena pro zapis do vysledneho souboru.
     return parties_votes_region
 
 
+def get_result_table(all_locations, parties_all_cr):
+    """
+    Funkce pouzije jako  prvni parametr list tuplu (kod, nazev, odkaz) z funkce get_all_locations
+    a z kazdeho odkazu na vysledky voleb pro konkretni obec ziska vsechny dalsi data
+    pro vytvoreni vysledne tabulky (registrovane volici, vydane obalky, platne hlasy, kandidujici strany
+    a pocet jimi ziskanych hlasu).
+    Druhy parametr je seznam vsech politickych stran CR pro vytvoreni stejneho vystupu po kazde obci.
+    :param parties_all_cr: seznam vsech politickych stran CR
+    :param all_locations: list tuplu (kod obce, nazev obce, odkaz na vysledky voleb v teto obci)
+    :return result_table: vysledna tabulka (list listu) pro zapis do souboru
+    """
+    result_table = []
+    for elem in all_locations:
+        code, name, link = elem
+        html = get_html(link)
+        soup = bs(html, 'html.parser')
+        registered_ = soup.find('td', class_='cislo', headers='sa2').text.strip()
+        registered = registered_.replace('\xa0', '')
+        envelops_ = soup.find('td', class_='cislo', headers='sa3').text.strip()
+        envelops = envelops_.replace('\xa0', '')
+        valid_ = soup.find('td', class_='cislo', headers='sa6').text.strip()
+        valid = valid_.replace('\xa0', '')
+
+        parties_votes = get_parties_votes(html)
+        parties_votes_region = get_corrected_parties_votes(parties_votes, parties_all_cr)
+        row_to_table = [code, name, registered, envelops, valid] + parties_votes_region
+        result_table.append(row_to_table)
+        print('Data for', code, name, 'parsed')
+    return result_table
+
+
 def write_csv(file, head, table):
     """
     Funkce zapise ziskana data do vysledneho souboru.
@@ -151,12 +181,11 @@ def write_csv(file, head, table):
         writer = csv.writer(f)
         writer.writerow(head)
         writer.writerows(table)
-    print(f'File {FILE_OUT} created')
 
 
 def main():
-    if len(sys.argv) < 2:
-        sys.exit("The script needs two arguments to work correctly, {} was given}".format(len(sys.argv)))
+    if len(sys.argv) < 3:
+        sys.exit("The script needs two arguments to work correctly, {} was given".format(len(sys.argv)-1))
     elif not sys.argv[1].startswith('https://volby.cz/pls/ps2017nss/'):
         sys.exit("Sorry, but the first argument isn't a link to a web page with the election results")
     else:
@@ -165,29 +194,13 @@ def main():
     parties_all_cr = get_all_parties_cr(URL_CR)
     table_head = create_table_head(parties_all_cr)
     print(f"STAHUJI DATA Z VYBRANEHO URL: {URL}")
-    html1 = get_html(URL)
-    all_locations = get_all_locations(html1)
-    result_table = []
-    for elem in all_locations:
-        code, name, link = elem
-        html2 = get_html(link)
-        soup = bs(html2, 'html.parser')
-        registered_ = soup.find('td', class_='cislo', headers='sa2').text.strip()
-        registered = registered_.replace('\xa0', '')
-        envelops_ = soup.find('td', class_='cislo', headers='sa3').text.strip()
-        envelops = envelops_.replace('\xa0', '')
-        valid_ = soup.find('td', class_='cislo', headers='sa6').text.strip()
-        valid = valid_.replace('\xa0', '')
-
-        parties_votes = get_parties_votes(html2)
-        parties_votes_region = get_corrected_parties_votes(parties_votes, parties_all_cr)
-        row_to_table = [code, name, registered, envelops, valid] + parties_votes_region
-        result_table.append(row_to_table)
-        print('Data for', code, name, 'parsed')
+    html = get_html(URL)
+    all_locations = get_all_locations(html)
+    result_table = get_result_table(all_locations, parties_all_cr)
 
     print(f"UKLADAM DATA DO SOUBORU: {FILE_OUT}")
     write_csv(FILE_OUT, table_head, result_table)
-
+    print(f'File {FILE_OUT} created')
 
 if __name__ == '__main__':
     main()
