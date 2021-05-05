@@ -6,8 +6,6 @@ import csv
 
 URL_CR = 'https://volby.cz/pls/ps2017nss/ps2?xjazyk=CZ&xkraj=0'
 URL_START = 'https://volby.cz/pls/ps2017nss/'
-# URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=2&xnumnuts=2109'
-# FILE_OUT = 'Vysledky_Praha-Vychod.csv'
 
 
 def get_all_parties_cr(url_cr):
@@ -76,9 +74,7 @@ def get_all_locations(html):
     for i, table in enumerate(tables, start=1):
         locations = []
         headers1 = f't{i}sa1 t{i}sb1'
-        # headers2 = f't{i}sa1 t{i}sb2'
         tds1 = table.find_all('td', class_="cislo", headers=headers1)
-        # tds2 = table.find_all('td', headers=headers2)
         for td in tds1:
             location_code = td.string
             location_name = td.next_sibling.next_sibling.text
@@ -91,7 +87,7 @@ def get_all_locations(html):
 def get_parties_votes(html):
     """
     Funkce ziska vysledky hlasovani pro danou obec podle politickych stran.
-    Vstupem funkce je odkaz na stranku s vysledky voleb pro konkretni obce z fukce get_all_locations.
+    Vstupem funkce je odkaz na stranku s vysledky voleb pro konkretni obec.
     Vystupem je list tuplu, obsahujici pary cisel - poradkove cislo strany a pocet platnych hlasu
     :param html: odkaz na stranku s vysledky voleb
     :return: list of tuples (party #, votes)
@@ -116,7 +112,7 @@ def get_parties_votes(html):
 def get_corrected_parties_votes(parties_votes, parties_all_cr):
     """
     Funkce vytori list s platnymi hlasy pro kazdou stranu v dane obci
-    a prida i strany, ktere v obci ne kandidovali s prazdnym stringem pro pocet hlasu.
+    a prida i strany, ktere v obci ne kandidovali s mezerou pro pocet hlasu.
     Ve vysledku data jsou zformovana podle celorepublikoveho seznamu a poradi politickych stran,
     a tim jsou pripravena pro zapis do vysledneho souboru.
     :param parties_votes: seznam politickych stran a jejich hlasu pro konkretni obec
@@ -194,7 +190,7 @@ def main():
         sys.exit("Sorry, but the first argument isn't a link to a web page with the election results")
     else:
         URL = sys.argv[1]
-        FILE_OUT = sys.argv[2] + '.csv'
+        FILE_OUT = sys.argv[2]
     parties_all_cr = get_all_parties_cr(URL_CR)
     table_head = create_table_head(parties_all_cr)
     print(f"STAHUJI DATA Z VYBRANEHO URL: {URL}")
@@ -208,3 +204,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# URL = 'https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=2&xnumnuts=2109'
+# FILE_OUT = 'Vysledky_Praha-Vychod.csv'
