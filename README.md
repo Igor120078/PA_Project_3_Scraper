@@ -6,9 +6,9 @@ Odkaz k prohlednuti naleznete [zde](https://volby.cz/pls/ps2017nss/ps32?xjazyk=C
 ## Instalace knihoven
 Knihovny, které jsou použity v kódu najdete v soubouru ```requirements.txt```.
 Pro instalaci doporučuji použít nové virtuální prostředí a s nainstalovaným manažerem spustit následovně:
-```
-pip3 --version                      # overim verzi manazeru
-pip3 install -r requirements.txt    # nainstalujeme knihovny
+``` python
+$ pip3 --version                      # overim verzi manazeru
+$ pip3 install -r requirements.txt    # nainstalujeme knihovny
 ```
 ## Spuštění projektu
 Spuštění souboru ```election_scraper.py``` pomoci příkazového řádku požaduje dva povinné argumenty.
