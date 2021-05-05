@@ -26,9 +26,16 @@ Spuštění programu:
 python election_scraper.py "https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=2&xnumnuts=2109" "Vysledky_Praha-Vychod.csv"
 ```
 Průběh stahování:
-![Průběh stahování](PA_Project_3_prubeh.jpg)
-![Ukončení programu](PA_Project_3_finish.jpg)
-
+```
+STAHUJI DATA Z VYBRANEHO URL: https://volby.cz/pls/ps2017nss/ps32?xjazyk=CZ&xkraj=2&xnumnuts=2109
+Data for 538043 Babice parsed
+Data for 538051 Bašť parsed
+...
+Data for 539082 Zlonín parsed
+Data for 539091 Zvánovice parsed
+UKLADAM DATA DO SOUBORU: Vysledky_Praha-Vychod.csv
+File Vysledky_Praha-Vychod.csv created
+```
 Částečný výstup:
 ```
 Kod obce,Název obce,Voliči v seznamu,Vydané obálky,Platné hlasy,Občanská demokratická strana, ...
